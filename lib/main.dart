@@ -1,4 +1,4 @@
-import 'package:health_management_app/widgets/auth.dart';
+import 'package:health_management_app/ui/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:health_management_app/theme/app_theme.dart';
 
@@ -11,21 +11,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: HomePage(),
+      home: MainPage(),
       debugShowCheckedModeBanner: false,
       theme: customTheme(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
+class MainPage extends StatefulWidget {
   @override
-  _HomePageState createState() => _HomePageState();
+  _MainPageState createState() => _MainPageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
-    return Auth();
+    return HomePage();
   }
 }
