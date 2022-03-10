@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import '../network/request.dart';
 import '../ui/custom_clipper.dart';
+import '../ui/homepage.dart';
 
 enum Verification { forgetPassword, otpVerification }
 
 // ignore: must_be_immutable
 class ForgetPw extends StatefulWidget {
-  ForgetPw({Key? key, this.verify}) : super(key: key);
+  ForgetPw({Key? key, this.verify, this.deviceId, this.userId})
+      : super(key: key);
   Verification? verify;
+  String? deviceId;
+  String? userId;
 
   @override
   _ForgetPwState createState() => _ForgetPwState();
@@ -14,8 +19,43 @@ class ForgetPw extends StatefulWidget {
 
 class _ForgetPwState extends State<ForgetPw> {
   final GlobalKey<FormState> _formKey = GlobalKey();
+
+  final _controller = TextEditingController();
+  final UserInfo _apiClient = UserInfo();
+
+  Future<UserInfo?> verifyOtp() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      if (_formKey.currentState!.validate()) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Processing Data'),
+          backgroundColor: Colors.green.shade300,
+        ));
+        dynamic res = await _apiClient.verifyOtp(
+          _controller.text,
+          widget.deviceId.toString(),
+          widget.userId.toString(),
+        );
+
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (res['token'] != null) {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const HomePage()));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${res['msg']}'),
+            backgroundColor: Colors.red.shade300,
+          ));
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('user:${widget.userId}');
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).primaryColor,
@@ -86,6 +126,7 @@ class _ForgetPwState extends State<ForgetPw> {
                               color: Theme.of(context).primaryColor)),
                       SizedBox(height: 20),
                       TextFormField(
+                        controller: _controller,
                         decoration: InputDecoration(
                           hintText:
                               widget.verify == Verification.otpVerification
@@ -114,6 +155,9 @@ class _ForgetPwState extends State<ForgetPw> {
                             borderRadius: BorderRadius.circular(30.0),
                           ),
                         ),
+                        onPressed: () {
+                          verifyOtp();
+                        },
                         child: Text(
                             widget.verify == Verification.forgetPassword
                                 ? "Confirm Number"
@@ -122,14 +166,6 @@ class _ForgetPwState extends State<ForgetPw> {
                                 fontSize: 18.0,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
-                        onPressed: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ForgetPw(
-                                    verify: Verification.otpVerification),
-                              ));
-                        },
                       ),
                     ],
                   ),
