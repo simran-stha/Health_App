@@ -53,8 +53,8 @@ class _BackgroundPageState extends State<BackgroundPage> {
                   top: 2.0,
                   child: Image.asset(
                     "images/logo.png",
-                    width: 180,
-                    height: 200,
+                    width: 170,
+                    height: 175,
                   ),
                 ),
               ],
