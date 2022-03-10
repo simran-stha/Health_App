@@ -25,6 +25,9 @@ dependencies:
     sdk: flutter
   toggle_switch: ^1.4.0
   font_awesome_flutter: ^9.2.0
+  dio: ^4.0.4
+  json_serializable: ^6.1.4
+  http: ^0.13.4
  
   
     
