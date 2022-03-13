@@ -5,8 +5,13 @@ class DashBoard extends StatelessWidget {
   final String accessToken;
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(accessToken),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Welcome to Dashboard Page!'),
+      ),
+      body: Center(
+        child: Text(accessToken),
+      ),
     );
   }
 }
