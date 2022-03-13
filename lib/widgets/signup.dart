@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:health_management_app/models/register_model.dart';
 import 'package:health_management_app/widgets/password_otp.dart';
 import 'package:toggle_switch/toggle_switch.dart';
-import 'package:health_management_app/network/request.dart';
-import 'package:health_management_app/network/response.dart';
+import '../network/apiClient.dart';
 
 class SignUp extends StatefulWidget {
   final Function toggleView;
@@ -27,71 +27,19 @@ class _SignUpState extends State<SignUp> {
   bool _isObscure = true;
 
   final GlobalKey<FormState> _formKey = GlobalKey();
-  final _passwordController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _specialityController = TextEditingController();
+
   // Initial Selected Value
   String dropdownvalue = 'Consultant';
   int labled = 0;
   late String deviceId;
   late String userId;
   late String accessToken;
+  DioClient _dioClient = DioClient();
+  RegisterRequestModel registerRequestModel = RegisterRequestModel();
+  RegisterResponseModel registerResponseModel = RegisterResponseModel();
 
-  UserInfo _apiClient = UserInfo();
-  RegResponse _regResponse = RegResponse();
-
-  Future<void> registerFunc() async {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Registering a user'),
-        backgroundColor: Colors.blue,
-      ));
-
-      dynamic res = await _apiClient.registerUser(UserInfo(
-          name: _nameController.text,
-          email: _emailController.text,
-          contact_number: _emailController.text,
-          password: _passwordController.text,
-          speciality: _specialityController.text,
-          is_verify: 'false',
-          device_id: '12345',
-          qualification: 'resident',
-          dob: '2 march 1989',
-          role: '2',
-          userType: 'resident'));
-      deviceId = _apiClient.device_id.toString();
-      userId = _apiClient.user_id.toString();
-      print('djkha');
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      print(_regResponse.isOtpSent);
-
-      String? testMsg = _regResponse.msg;
-
-      if (testMsg == null) {
-        print("Empty or NULL Value received");
-      } else {
-        print(testMsg);
-      }
-
-      print(_regResponse.msg);
-
-      if (_regResponse.isOtpSent == true) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) {
-          return ForgetPw(
-            verify: Verification.otpVerification,
-            deviceId: deviceId,
-            userId: userId,
-          );
-        }));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: ${_regResponse.msg}'),
-          backgroundColor: Colors.red.shade300,
-        ));
-      }
-    }
-  }
+  DateTime selectedDate = DateTime.now();
+  String value = "";
 
   @override
   Widget build(BuildContext context) {
@@ -101,13 +49,14 @@ class _SignUpState extends State<SignUp> {
       children: [
         SingleChildScrollView(
           child: Container(
+            margin: EdgeInsets.only(top: 25),
             child:
                 Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Container(
-                margin: EdgeInsets.only(top: 10.5),
+                margin: EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(0.0),
-                width: deviceSize.width * 0.90,
-                height: deviceSize.height * 0.63,
+                width: 330,
+                height: 480,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.all(Radius.circular(30)),
@@ -146,7 +95,9 @@ class _SignUpState extends State<SignUp> {
                       child: SingleChildScrollView(
                         child: Column(children: [
                           TextFormField(
-                            controller: _nameController,
+                            // controller: _nameController,
+                            onSaved: (newValue) =>
+                                registerRequestModel.name = newValue,
                             keyboardType: TextInputType.text,
                             decoration: InputDecoration(
                               hintText: 'Full Name',
@@ -172,25 +123,57 @@ class _SignUpState extends State<SignUp> {
                                       onChanged: (String? newValue) {
                                         setState(() {
                                           selectedValue = newValue!;
+                                          registerRequestModel.qualification =
+                                              newValue;
                                         });
                                       },
                                       items: dropdownItems),
                                 ),
                               ]),
                           TextFormField(
-                            controller: _specialityController,
+                            // controller: _specialityController,
+                            onSaved: (newValue) {
+                              registerRequestModel.speciality = newValue;
+                              registerRequestModel.userType = newValue;
+                            },
                             keyboardType: TextInputType.text,
                             decoration: InputDecoration(
                               labelText: 'Speciality',
                               fillColor: Theme.of(context).primaryColor,
                             ),
                           ),
+                          TextFormField(
+                              readOnly: true,
+                              onChanged: (newValue) =>
+                                  registerRequestModel.dob = value,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                // label: Text(value),
+                                hintText: value,
+                              ),
+                              onTap: () async {
+                                final DateTime? selected = await showDatePicker(
+                                  context: context,
+                                  initialDate: selectedDate,
+                                  firstDate: DateTime(2010),
+                                  lastDate: DateTime(2025),
+                                );
+                                if (selected != null &&
+                                    selected != selectedDate) {
+                                  setState(() {
+                                    selectedDate = selected;
+                                    value =
+                                        "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
+                                  });
+                                }
+                              }),
                           Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 Expanded(
-                                  child: TextField(
-                                    controller: _emailController,
+                                  child: TextFormField(
+                                    onChanged: (newValue) =>
+                                        registerRequestModel.email = newValue,
                                     keyboardType: TextInputType.text,
                                     decoration: InputDecoration(
                                       hintText: 'Email',
@@ -198,7 +181,9 @@ class _SignUpState extends State<SignUp> {
                                   ),
                                 ),
                                 Expanded(
-                                  child: TextField(
+                                  child: TextFormField(
+                                    onSaved: (newValue) => registerRequestModel
+                                        .contact_number = newValue,
                                     keyboardType: TextInputType.text,
                                     decoration: InputDecoration(
                                       hintText: 'Mobile Number',
@@ -207,9 +192,11 @@ class _SignUpState extends State<SignUp> {
                                 ),
                               ]),
                           TextFormField(
+                            onSaved: (newValue) =>
+                                registerRequestModel.password = newValue,
                             keyboardType: TextInputType.visiblePassword,
                             textInputAction: TextInputAction.next,
-                            controller: _passwordController,
+                            // controller: _passwordController,
                             decoration: InputDecoration(
                               hintText: "Password",
                               suffixIcon: IconButton(
@@ -235,6 +222,8 @@ class _SignUpState extends State<SignUp> {
                             },
                           ),
                           TextFormField(
+                            onSaved: (newValue) =>
+                                registerRequestModel.password = newValue,
                             keyboardType: TextInputType.visiblePassword,
                             textInputAction: TextInputAction.next,
                             decoration: InputDecoration(
@@ -253,6 +242,13 @@ class _SignUpState extends State<SignUp> {
                                 },
                               ),
                             ),
+                            obscureText: _isObscure,
+                            validator: (value) {
+                              if (value!.isEmpty || value.length < 5) {
+                                return 'Password is too short!';
+                              }
+                              return null;
+                            },
                           ),
                           Padding(
                             padding: const EdgeInsets.only(top: 15.0),
@@ -260,7 +256,50 @@ class _SignUpState extends State<SignUp> {
                               width: double.infinity, // match_parent
                               child: ElevatedButton(
                                 onPressed: () {
-                                  registerFunc();
+                                  if (validateAndSave()) {
+                                    // loginFunc();
+                                    print('simran');
+                                    print(registerRequestModel.toJson());
+                                    _dioClient
+                                        .register(registerRequestModel)
+                                        .then((value) {
+                                      if (value != null) {
+                                        print(value.msg);
+                                        if (value.isOtpSent == true) {
+                                          userId = value.userId.toString();
+                                          print(userId);
+                                          ScaffoldMessenger.of(context)
+                                              .hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                            content: Text('${value.msg}'),
+                                            backgroundColor:
+                                                Colors.green.shade300,
+                                          ));
+                                          deviceId = registerRequestModel
+                                              .device_id
+                                              .toString();
+                                          userId = value.userId.toString();
+                                          Navigator.push(context,
+                                              MaterialPageRoute(
+                                                  builder: (context) {
+                                            return OtpPage(
+                                              verify: CardMode.otpVerification,
+                                              userId: userId,
+                                            );
+                                          }));
+                                        } else {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                            content:
+                                                Text('Error: ${value.msg}'),
+                                            backgroundColor:
+                                                Colors.red.shade300,
+                                          ));
+                                        }
+                                      }
+                                    });
+                                  }
                                 },
                                 child: const Text(
                                   'Sign Up',
@@ -291,5 +330,14 @@ class _SignUpState extends State<SignUp> {
         ),
       ],
     );
+  }
+
+  bool validateAndSave() {
+    final form = _formKey.currentState;
+    if (form!.validate()) {
+      form.save();
+      return true;
+    }
+    return false;
   }
 }
