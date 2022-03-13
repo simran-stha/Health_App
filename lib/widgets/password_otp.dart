@@ -1,57 +1,32 @@
-import 'package:flutter/material.dart';
-import '../network/request.dart';
-import '../ui/custom_clipper.dart';
-import '../ui/homepage.dart';
+// ignore_for_file: camel_case_types
 
-enum Verification { forgetPassword, otpVerification }
+import 'package:flutter/material.dart';
+import 'package:health_management_app/models/otp_verification_model.dart';
+import 'package:health_management_app/ui/dashboard.dart';
+import '../network/apiClient.dart';
+import '../ui/custom_clipper.dart';
+import '../ui/dashboard.dart';
+
+enum CardMode { forgetPassword, otpVerification }
 
 // ignore: must_be_immutable
-class ForgetPw extends StatefulWidget {
-  ForgetPw({Key? key, this.verify, this.deviceId, this.userId})
+class OtpPage extends StatefulWidget {
+  OtpPage({Key? key, this.verify, this.deviceId, this.userId})
       : super(key: key);
-  Verification? verify;
+  CardMode? verify;
   String? deviceId;
   String? userId;
 
   @override
-  _ForgetPwState createState() => _ForgetPwState();
+  OtpPageState createState() => OtpPageState();
 }
 
-class _ForgetPwState extends State<ForgetPw> {
+class OtpPageState extends State<OtpPage> {
   final GlobalKey<FormState> _formKey = GlobalKey();
 
-  final _controller = TextEditingController();
-  final UserInfo _apiClient = UserInfo();
-
-  Future<UserInfo?> verifyOtp() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      if (_formKey.currentState!.validate()) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Processing Data'),
-          backgroundColor: Colors.green.shade300,
-        ));
-        dynamic res = await _apiClient.verifyOtp(
-          _controller.text,
-          widget.deviceId.toString(),
-          widget.userId.toString(),
-        );
-
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-        if (res['token'] != null) {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const HomePage()));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: ${res['msg']}'),
-            backgroundColor: Colors.red.shade300,
-          ));
-        }
-      }
-    }
-    return null;
-  }
+  final DioClient _dioClient = DioClient();
+  OtpRequestModel otpRequestModel = OtpRequestModel();
+  OtpResponseModel otpResponseModel = OtpResponseModel();
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +92,7 @@ class _ForgetPwState extends State<ForgetPw> {
                   child: Column(
                     children: [
                       Text(
-                          widget.verify == Verification.forgetPassword
+                          widget.verify == CardMode.forgetPassword
                               ? "Forget Password"
                               : "OTP Verification",
                           style: TextStyle(
@@ -126,19 +101,19 @@ class _ForgetPwState extends State<ForgetPw> {
                               color: Theme.of(context).primaryColor)),
                       SizedBox(height: 20),
                       TextFormField(
-                        controller: _controller,
+                        // controller: _controller,
+                        onSaved: (newValue) => otpRequestModel.otp = newValue,
                         decoration: InputDecoration(
-                          hintText:
-                              widget.verify == Verification.otpVerification
-                                  ? "Enter 6 digits OTP code here"
-                                  : "Enter your mobile number ",
+                          hintText: widget.verify == CardMode.otpVerification
+                              ? "Enter 4 digits OTP code here"
+                              : "Enter your mobile number ",
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
                           if (value!.isEmpty) {
-                            return widget.verify == Verification.forgetPassword
+                            return widget.verify == CardMode.forgetPassword
                                 ? "Please enter your mobile number"
-                                : "Please enter 6 digits OTP code";
+                                : "Please enter 4 digits OTP code";
                           }
                           return null;
                         },
@@ -156,10 +131,34 @@ class _ForgetPwState extends State<ForgetPw> {
                           ),
                         ),
                         onPressed: () {
-                          verifyOtp();
+                          if (validateAndSave()) {
+                            _dioClient
+                                .verifyOtp(
+                                    otpRequestModel, widget.userId.toString())
+                                .then((value) {
+                              if (value != null) {
+                                print(value.msg);
+                                if (value.msg != null) {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => const DashBoard(
+                                                accessToken: '',
+                                              )));
+                                } else {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(SnackBar(
+                                    content:
+                                        Text('Error: ${otpResponseModel.msg}'),
+                                    backgroundColor: Colors.red.shade300,
+                                  ));
+                                }
+                              }
+                            });
+                          }
                         },
                         child: Text(
-                            widget.verify == Verification.forgetPassword
+                            widget.verify == CardMode.forgetPassword
                                 ? "Confirm Number"
                                 : "Verify OTP",
                             style: const TextStyle(
@@ -176,5 +175,14 @@ class _ForgetPwState extends State<ForgetPw> {
         ]),
       ),
     );
+  }
+
+  bool validateAndSave() {
+    final form = _formKey.currentState;
+    if (form!.validate()) {
+      form.save();
+      return true;
+    }
+    return false;
   }
 }
