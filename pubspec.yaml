@@ -28,6 +28,7 @@ dependencies:
   dio: ^4.0.4
   json_serializable: ^6.1.4
   http: ^0.13.4
+  intl: ^0.17.0
  
   
     
